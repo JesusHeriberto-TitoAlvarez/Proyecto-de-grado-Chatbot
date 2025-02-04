@@ -109,7 +109,7 @@ def webhook():
                             message = change["value"]["messages"][0]
                             sender_id = message["from"]
                             message_text = message["text"]["body"]
-                            send_message(sender_id, f"Recibí tu mensaje y le haremos copias en github: {message_text}")
+                            send_message(sender_id, f"Recibí tu mensaje y le haremos copias en github. Acabo de jalar este codigo desde mi portatil: {message_text}")
         return "Evento recibido", 200
 
 def send_message(recipient_id, text):
