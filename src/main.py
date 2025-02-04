@@ -2,6 +2,82 @@ from flask import Flask, request
 import os
 import requests
 from dotenv import load_dotenv
+from modelo import preprocess_text, classify_message
+
+load_dotenv()
+
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "El chatbot está funcionando correctamente."
+
+@app.route("/webhook", methods=["GET", "POST"])
+def webhook():
+    if request.method == "GET":
+        verify_token = request.args.get("hub.verify_token")
+        if verify_token == VERIFY_TOKEN:
+            return request.args.get("hub.challenge")
+        return "Token inválido", 403
+
+    if request.method == "POST":
+        data = request.get_json()
+        if data and "entry" in data:
+            for entry in data["entry"]:
+                for change in entry["changes"]:
+                    if "messages" in change["value"]:
+                        message = change["value"]["messages"][0]
+                        sender_id = message["from"]
+                        message_text = message["text"]["body"]
+
+                        # Clasificar el mensaje recibido
+                        category = classify_message(message_text)
+
+                        # Definir respuestas según categoría
+                        respuestas = {
+                            0: "¡Hola! ¿En qué puedo ayudarte?",
+                            1: "Nuestros precios varían según el servicio. ¿Quieres más detalles?",
+                            2: "Puedes contactar a soporte en nuestro sitio web.",
+                            3: "¡De nada! Estoy aquí para ayudar."
+                        }
+
+                        respuesta = respuestas.get(category, "Lo siento, no entendí tu mensaje.")
+                        send_message(sender_id, respuesta)
+
+    return "Evento recibido", 200
+
+def send_message(recipient_id, text):
+    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": recipient_id,
+        "type": "text",
+        "text": {"body": text}
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200:
+        print(f"Error al enviar el mensaje: {response.text}")
+    else:
+        print("Mensaje enviado correctamente.")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=True)
+
+
+
+'''
+from flask import Flask, request
+import os
+import requests
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -56,7 +132,7 @@ def send_message(recipient_id, text):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080, debug=True)
-
+'''
 
 # import os
 # from flask import Flask, request, jsonify
